@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".activities.ConversationsActivity">
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="Enter messaging IP"
+        android:id="@+id/peerIP"
+        android:text="192.168.8."/>
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="Enter messaging mobile"
+        android:id="@+id/mobileNo"
+        android:text="9476823719"/>
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="Enter your number"
+        android:id="@+id/myNumber"
+        android:text="9476823719"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Message"
+        android:id="@+id/message"/>
+
+    <TextView
+        android:id="@+id/privateIPAddress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Private IP Address: Nil"
+        android:textSize="15sp"/>
+
+    <TextView
+        android:id="@+id/publicIPAddress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Public IP Address: Nil"
+        android:textSize="15sp"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Start"
+        android:id="@+id/startButton" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Stop"
+        android:id="@+id/stopButton" />
+
+</LinearLayout>
