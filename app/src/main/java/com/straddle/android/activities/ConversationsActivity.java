@@ -16,7 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.straddle.android.R;
-import com.straddle.android.services.StraddleProtocol;
+import com.straddle.android.services.STMessage;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -35,7 +35,7 @@ public class ConversationsActivity extends AppCompatActivity implements View.OnC
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_conversations);
 
-        startService(new Intent(this, StraddleProtocol.class));
+        startService(new Intent(this, STMessage.class));
 
 //        LocalBroadcastManager.getInstance(this).registerReceiver(aLBReceiver,
 //                new IntentFilter("eventName"));
@@ -60,7 +60,7 @@ public class ConversationsActivity extends AppCompatActivity implements View.OnC
 
     @Override
     public void onClick(View v) {
-        switch(v.getId()) {
+        switch (v.getId()) {
             case R.id.message:
                 Intent intent = new Intent(this, ChatActivity.class);
                 intent.putExtra("PEER_IP", peerIP.getText().toString());
@@ -69,7 +69,7 @@ public class ConversationsActivity extends AppCompatActivity implements View.OnC
                 startActivity(intent);
                 break;
             case R.id.startButton:
-//                startService(new Intent(this, StraddleProtocol.class));
+//                startService(new Intent(this, STMessage.class));
 //                LocalBroadcastManager.getInstance(this).registerReceiver(new BroadcastReceiver() {
 //                    @Override
 //                    public void onReceive(Context context, Intent intent) {
@@ -81,7 +81,7 @@ public class ConversationsActivity extends AppCompatActivity implements View.OnC
 //                        new IntentFilter("eventName"));
                 break;
             case R.id.stopButton:
-                stopService(new Intent(this, StraddleProtocol.class));
+                stopService(new Intent(this, STMessage.class));
                 break;
         }
     }
@@ -97,9 +97,9 @@ public class ConversationsActivity extends AppCompatActivity implements View.OnC
 
     public void getLocalIPAddress() {
         try {
-            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
                 NetworkInterface intf = en.nextElement();
-                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
                     InetAddress inetAddress = enumIpAddr.nextElement();
                     if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
                         privateIPAddress.setText("Private IP Address: " + inetAddress.getHostAddress());
@@ -110,6 +110,7 @@ public class ConversationsActivity extends AppCompatActivity implements View.OnC
             ex.printStackTrace();
         }
     }
+
 
     @Override
     public void onPause() {

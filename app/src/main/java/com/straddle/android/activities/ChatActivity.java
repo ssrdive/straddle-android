@@ -4,16 +4,18 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.StrictMode;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -24,12 +26,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.straddle.android.R;
+import com.straddle.android.services.STMessage;
 import com.straddle.android.utils.SQLiteHelper;
 import com.straddle.android.utils.Utils;
 
-import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 
 public class ChatActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -46,6 +47,9 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
     ScrollView scrollMessages;
 
     Utils utils;
+
+    boolean mBounded;
+    STMessage straddleProtocol;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -153,16 +157,8 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
                         +"~"+saved
                         +"~"+utils.dateTime()
                         +"~"+message.getText().toString();
-
-                byte[] messageBytes = sendString.getBytes();
-                try {
-                    DatagramPacket sendPacket = new DatagramPacket(messageBytes,
-                            messageBytes.length, InetAddress.getByName(peerIP), 7070);
-                    clientSocket.send(sendPacket);
-                    addMessage((int) saved, "to", message.getText().toString(), utils.dateTime());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                straddleProtocol.sendPacket(sendString, peerIP);
+                addMessage((int) saved, "to", message.getText().toString(), utils.dateTime());
                 moveToBottom();
                 message.setText("");
                 break;
@@ -217,6 +213,31 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+
+        Intent mIntent = new Intent(this, STMessage.class);
+        bindService(mIntent, mConnection, BIND_AUTO_CREATE);
+    }
+
+    ServiceConnection mConnection = new ServiceConnection() {
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+//            Toast.makeText(ChatActivity.this, "Service is disconnected", Toast.LENGTH_LONG).show();
+            mBounded = false;
+            straddleProtocol = null;
+        }
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+//            Toast.makeText(ChatActivity.this, "Service is connected", Toast.LENGTH_LONG).show();
+            mBounded = true;
+            STMessage.LocalBinder mLocalBinder = (STMessage.LocalBinder) service;
+            straddleProtocol = mLocalBinder.getServerInstance();
+        }
+    };
+
+    @Override
     public void onPause() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(aLBReceiver);
         super.onPause();
@@ -227,5 +248,15 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         LocalBroadcastManager.getInstance(this).registerReceiver(aLBReceiver,
                 new IntentFilter("eventName"));
         super.onResume();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        if(mBounded) {
+            unbindService(mConnection);
+            mBounded = false;
+        }
     }
 }

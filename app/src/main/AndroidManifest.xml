@@ -28,7 +28,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".activities.SocketTestActivity" />
-        <service android:name=".services.StraddleProtocol" />
+        <service android:name=".services.STMessage" />
     </application>
 
 </manifest>

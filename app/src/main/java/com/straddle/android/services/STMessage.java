@@ -4,6 +4,7 @@ import android.app.Service;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -16,11 +17,21 @@ import com.straddle.android.utils.Utils;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
-public class StraddleProtocol extends Service {
+public class STMessage extends Service {
     DatagramSocket serverSocket;
     SQLiteDatabase db;
     Utils utils;
+
+    IBinder mBinder = new LocalBinder();
+
+    public class LocalBinder extends Binder {
+        public STMessage getServerInstance() {
+            return STMessage.this;
+        }
+    }
 
     @Override
     public void onCreate() {
@@ -31,8 +42,8 @@ public class StraddleProtocol extends Service {
         Thread thread = new Thread(){
             public void run() {
                 try {
-                    serverSocket = new DatagramSocket(7070);
                     for(;;) {
+                        serverSocket = new DatagramSocket(7070);
                         DatagramPacket receivePacket = new DatagramPacket(new byte[1024], 1024);
                         serverSocket.receive(receivePacket);
 
@@ -68,6 +79,9 @@ public class StraddleProtocol extends Service {
                             case "RECEIVED":
                                 db.execSQL("UPDATE sent_message SET sent = 1, sent_timestamp = \"" + dataArr[2] + "\" WHERE id = " + dataArr[1]);
                                 break;
+                            case "READ":
+
+                                break;
                         }
                         Intent newIntent = new Intent("eventName");
                         newIntent.putExtra("data", data); // You can add additional data to the intent...
@@ -82,6 +96,23 @@ public class StraddleProtocol extends Service {
         thread.start();
     }
 
+    public void sendPacket(String payload, String peerIP) {
+        byte[] messageBytes = payload.getBytes();
+        try {
+            DatagramSocket serverSocket = new DatagramSocket();
+            DatagramPacket sendPacket = new DatagramPacket(messageBytes,
+                    messageBytes.length, InetAddress.getByName(peerIP), 7070);
+            serverSocket.send(sendPacket);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public String getTime() {
+        SimpleDateFormat mDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        return mDateFormat.format(new Date());
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         return START_STICKY;
@@ -93,9 +124,8 @@ public class StraddleProtocol extends Service {
         serverSocket.close();
     }
 
-    @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return mBinder;
     }
 }
