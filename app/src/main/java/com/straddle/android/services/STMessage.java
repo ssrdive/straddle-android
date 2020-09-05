@@ -39,61 +39,64 @@ public class STMessage extends Service {
         db = new SQLiteHelper(getApplicationContext()).getReadableDatabase();
         utils = new Utils();
 
-        Thread thread = new Thread(){
-            public void run() {
-                try {
-                    serverSocket = new DatagramSocket(7070);
-                    for(;;) {
-                        DatagramPacket receivePacket = new DatagramPacket(new byte[1024], 1024);
-                        serverSocket.receive(receivePacket);
+        PeerServer peerServer = new PeerServer(getApplicationContext(), db);
+        peerServer.start();
 
-                        InetAddress packetIP = receivePacket.getAddress();
-
-                        String data = new String(receivePacket.getData(), receivePacket.getOffset(), receivePacket.getLength());
-                        String[] dataArr = data.split("~");
-
-                        switch (dataArr[0]) {
-                            case "MESSAGE":
-                                ContentValues values = new ContentValues();
-                                values.put("message_id", dataArr[2]);
-                                values.put("from_user", dataArr[1]);
-                                values.put("message", dataArr[4]);
-                                values.put("timestamp", dataArr[3]);
-                                long saved = db.insert("received_message", null, values);
-                                Log.d("SAVE STATUS", Long.toString(saved));
-                                if (saved == -1) {
-
-                                    // Failed to save message
-                                }
-
-                                // Send RECEIVED packet for the message
-                                String sendString = "RECEIVED"
-                                        +"~"+dataArr[2]
-                                        +"~"+utils.dateTime();
-
-                                byte[] messageBytes = sendString.getBytes();
-                                DatagramPacket sendPacket = new DatagramPacket(messageBytes,
-                                        messageBytes.length, packetIP, 7070);
-                                serverSocket.send(sendPacket);
-                                break;
-                            case "RECEIVED":
-                                db.execSQL("UPDATE sent_message SET sent = 1, sent_timestamp = \"" + dataArr[2] + "\" WHERE id = " + dataArr[1]);
-                                break;
-                            case "READ":
-                                db.execSQL("UPDATE sent_message SET read_timestamp = \""+dataArr[1]+"\" WHERE id IN ("+dataArr[2]+")");
-                                break;
-                        }
-                        Intent newIntent = new Intent("eventName");
-                        newIntent.putExtra("data", data); // You can add additional data to the intent...
-                        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(newIntent);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-
-        thread.start();
+//        Thread thread = new Thread(){
+//            public void run() {
+//                try {
+//                    serverSocket = new DatagramSocket(7070);
+//                    for(;;) {
+//                        DatagramPacket receivePacket = new DatagramPacket(new byte[1024], 1024);
+//                        serverSocket.receive(receivePacket);
+//
+//                        InetAddress packetIP = receivePacket.getAddress();
+//
+//                        String data = new String(receivePacket.getData(), receivePacket.getOffset(), receivePacket.getLength());
+//                        String[] dataArr = data.split("~");
+//
+//                        switch (dataArr[0]) {
+//                            case "MESSAGE":
+//                                ContentValues values = new ContentValues();
+//                                values.put("message_id", dataArr[2]);
+//                                values.put("from_user", dataArr[1]);
+//                                values.put("message", dataArr[4]);
+//                                values.put("timestamp", dataArr[3]);
+//                                long saved = db.insert("received_message", null, values);
+//                                Log.d("SAVE STATUS", Long.toString(saved));
+//                                if (saved == -1) {
+//
+//                                    // Failed to save message
+//                                }
+//
+//                                // Send RECEIVED packet for the message
+//                                String sendString = "RECEIVED"
+//                                        +"~"+dataArr[2]
+//                                        +"~"+utils.dateTime();
+//
+//                                byte[] messageBytes = sendString.getBytes();
+//                                DatagramPacket sendPacket = new DatagramPacket(messageBytes,
+//                                        messageBytes.length, packetIP, 7070);
+//                                serverSocket.send(sendPacket);
+//                                break;
+//                            case "RECEIVED":
+//                                db.execSQL("UPDATE sent_message SET sent = 1, sent_timestamp = \"" + dataArr[2] + "\" WHERE id = " + dataArr[1]);
+//                                break;
+//                            case "READ":
+//                                db.execSQL("UPDATE sent_message SET read_timestamp = \""+dataArr[1]+"\" WHERE id IN ("+dataArr[2]+")");
+//                                break;
+//                        }
+//                        Intent newIntent = new Intent("eventName");
+//                        newIntent.putExtra("data", data); // You can add additional data to the intent...
+//                        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(newIntent);
+//                    }
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        };
+//
+//        thread.start();
     }
 
     public void sendPacket(String payload, String peerIP) {
