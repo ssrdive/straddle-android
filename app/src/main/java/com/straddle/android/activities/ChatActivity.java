@@ -49,7 +49,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
     Utils utils;
 
     boolean mBounded;
-    STMessage straddleProtocol;
+    STMessage stMessage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,10 +105,29 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
             switch (dataArr[0]) {
                 case "MESSAGE":
                     if(dataArr[1].equals(peerMobileNo)) {
-                        addMessage(Integer.parseInt(dataArr[2]), "from", dataArr[4], dataArr[3]);
+                        addMessage(Integer.parseInt(dataArr[2]), "from", dataArr[4], dataArr[3], "","", "");
                         moveToBottom();
+                        String dateTime = utils.dateTime();
+                        db.execSQL("UPDATE received_message SET read_timestamp = \""
+                                + dateTime + "\" WHERE message_id = " + dataArr[2]);
+                        String sendString = "READ"
+                                +"~"+dateTime
+                                +"~"+dataArr[2];
+                        stMessage.sendPacket(sendString, peerIP);
+
                     } else {
                         Toast.makeText(getApplicationContext(), data, Toast.LENGTH_SHORT).show();
+                    }
+                    break;
+                case "RECEIVED":
+                    TextView msgDeliveredStatus = findViewById(Integer.parseInt(dataArr[1]));
+                    msgDeliveredStatus.setText("Delivered on " + dataArr[2]);
+                    break;
+                case "READ":
+                    String[] ids = dataArr[2].split(",");
+                    for(String id : ids) {
+                        TextView msgReadStatus = findViewById(Integer.parseInt(id));
+                        msgReadStatus.setText("Read on " + dataArr[1]);
                     }
                     break;
             }
@@ -117,22 +136,50 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
 
     public void getMessages() {
         Cursor res = db.rawQuery("SELECT * FROM (SELECT id, message, timestamp, \"from\" AS " +
-                "type FROM received_message " +
+                "type, \"\" AS sent, \"\" AS sent_timestamp, \"\" AS read_timestamp FROM received_message " +
                 "WHERE from_user = "+peerMobileNo+" UNION SELECT id, message, timestamp, \"to\" AS " +
-                "type FROM sent_message WHERE to_user = "+peerMobileNo+") M " +
+                "type, sent, sent_timestamp, read_timestamp FROM sent_message WHERE to_user = "+peerMobileNo+") M " +
                 "ORDER BY timestamp ASC", null);
         res.moveToFirst();
         while (res.isAfterLast() == false) {
             addMessage(Integer.parseInt(res.getString(res.getColumnIndex("id"))),
                     res.getString(res.getColumnIndex("type")),
                     res.getString(res.getColumnIndex("message")),
-                    res.getString(res.getColumnIndex("timestamp")));
+                    res.getString(res.getColumnIndex("timestamp")),
+                    res.getString(res.getColumnIndex("sent")),
+                    res.getString(res.getColumnIndex("sent_timestamp")),
+                    res.getString(res.getColumnIndex("read_timestamp")));
             res.moveToNext();
         }
     }
 
     public void sendReadReceipts() {
+        Cursor res = db.rawQuery("SELECT id, message_id " +
+                "FROM received_message " +
+                "WHERE read_timestamp IS NULL AND from_user = " + peerMobileNo, null);
+        String localIDs = "";
+        String peerIDs = "";
+        String dateTime = utils.dateTime();
+        if(res.getCount() != 0) {
+            res.moveToFirst();
+            while(res.isAfterLast() == false) {
+                localIDs = localIDs + res.getString(res.getColumnIndex("id"));
+                peerIDs = peerIDs + res.getString(res.getColumnIndex("message_id"));
+                if(res.isLast() == false) {
+                    localIDs = localIDs + ",";
+                    peerIDs = peerIDs + ",";
+                }
+                res.moveToNext();
+            }
 
+            db.execSQL("UPDATE received_message SET read_timestamp = \""
+                    + dateTime + "\" WHERE id IN (" + localIDs + ")");
+
+            String sendString = "READ"
+                    +"~"+dateTime
+                    +"~"+peerIDs;
+            stMessage.sendPacket(sendString, peerIP);
+        }
     }
 
     @Override
@@ -152,13 +199,15 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
                     // TO DO
                 }
 
+                String dateTime = utils.dateTime();
                 String sendString = "MESSAGE"
                         +"~"+myNumber
                         +"~"+saved
-                        +"~"+utils.dateTime()
+                        +"~"+dateTime
                         +"~"+message.getText().toString();
-                straddleProtocol.sendPacket(sendString, peerIP);
-                addMessage((int) saved, "to", message.getText().toString(), utils.dateTime());
+                stMessage.sendPacket(sendString, peerIP);
+                addMessage((int) saved, "to", message.getText().toString(), dateTime,
+                        "0", "", "");
                 moveToBottom();
                 message.setText("");
                 break;
@@ -177,13 +226,14 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         },100);
     }
 
-    public void addMessage(int id, String type, String message, String timestamp) {
+    public void addMessage(int id, String type, String message,
+                           String timestamp, String sent, String sentTimestamp, String readTimestamp) {
         TextView tvMsg = new TextView(this);
         tvMsg.setText(message);
         tvMsg.setTextSize(18);
 
         TextView tvTime = new TextView(this);
-        tvTime.setText(utils.dateTime());
+        tvTime.setText(timestamp);
         tvTime.setTextSize(8);
 
         if(type.equals("to")) {
@@ -197,13 +247,25 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
             layout.setGravity(Gravity.RIGHT);
             layout.addView(tvTime);
 
+            TextView tvDash = new TextView(this);
+            tvDash.setTextSize(10);
+            tvDash.setText(" \u2014 ");
+
             TextView tvStatus = new TextView(this);
             tvStatus.setId(id);
-            tvStatus.setText(" \u2014 Sending");
             tvStatus.setOnClickListener(this);
             tvStatus.setTextSize(10);
-            layout.addView(tvStatus);
 
+            if(!readTimestamp.equals("")) {
+                tvStatus.setText("Read on " + readTimestamp);
+            } else if(sent.equals("1")) {
+                tvStatus.setText("Delivered on " + sentTimestamp);
+            } else {
+                tvStatus.setText("Sending");
+            }
+
+            layout.addView(tvDash);
+            layout.addView(tvStatus);
             messagesView.addView(layout);
         } else {
             tvMsg.setTextColor(Color.parseColor("#4287f5"));
@@ -225,7 +287,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         public void onServiceDisconnected(ComponentName name) {
 //            Toast.makeText(ChatActivity.this, "Service is disconnected", Toast.LENGTH_LONG).show();
             mBounded = false;
-            straddleProtocol = null;
+            stMessage = null;
         }
 
         @Override
@@ -233,7 +295,8 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
 //            Toast.makeText(ChatActivity.this, "Service is connected", Toast.LENGTH_LONG).show();
             mBounded = true;
             STMessage.LocalBinder mLocalBinder = (STMessage.LocalBinder) service;
-            straddleProtocol = mLocalBinder.getServerInstance();
+            stMessage = mLocalBinder.getServerInstance();
+            sendReadReceipts();
         }
     };
 

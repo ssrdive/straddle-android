@@ -42,8 +42,8 @@ public class STMessage extends Service {
         Thread thread = new Thread(){
             public void run() {
                 try {
+                    serverSocket = new DatagramSocket(7070);
                     for(;;) {
-                        serverSocket = new DatagramSocket(7070);
                         DatagramPacket receivePacket = new DatagramPacket(new byte[1024], 1024);
                         serverSocket.receive(receivePacket);
 
@@ -80,7 +80,7 @@ public class STMessage extends Service {
                                 db.execSQL("UPDATE sent_message SET sent = 1, sent_timestamp = \"" + dataArr[2] + "\" WHERE id = " + dataArr[1]);
                                 break;
                             case "READ":
-
+                                db.execSQL("UPDATE sent_message SET read_timestamp = \""+dataArr[1]+"\" WHERE id IN ("+dataArr[2]+")");
                                 break;
                         }
                         Intent newIntent = new Intent("eventName");

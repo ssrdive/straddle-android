@@ -81,7 +81,7 @@ public class ConversationsActivity extends AppCompatActivity implements View.OnC
 //                        new IntentFilter("eventName"));
                 break;
             case R.id.stopButton:
-                stopService(new Intent(this, STMessage.class));
+//                stopService(new Intent(this, STMessage.class));
                 break;
         }
     }
