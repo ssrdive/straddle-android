@@ -90,7 +90,7 @@ public class ConversationsActivity extends AppCompatActivity implements View.OnC
         @Override
         public void onReceive(Context context, Intent intent) {
             String data = intent.getStringExtra("data");
-            Toast.makeText(getApplicationContext(), data, Toast.LENGTH_SHORT).show();
+//            Toast.makeText(getApplicationContext(), data, Toast.LENGTH_SHORT).show();
             Log.d("FROM_CONV", data);
         }
     };

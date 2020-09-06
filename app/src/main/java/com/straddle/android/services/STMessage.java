@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Binder;
 import android.os.IBinder;
+import android.os.StrictMode;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -14,9 +15,12 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.straddle.android.utils.SQLiteHelper;
 import com.straddle.android.utils.Utils;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -24,6 +28,9 @@ public class STMessage extends Service {
     DatagramSocket serverSocket;
     SQLiteDatabase db;
     Utils utils;
+
+    Socket serverSock;
+    DataOutputStream serverOutput;
 
     IBinder mBinder = new LocalBinder();
 
@@ -36,11 +43,22 @@ public class STMessage extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+
         db = new SQLiteHelper(getApplicationContext()).getReadableDatabase();
         utils = new Utils();
 
         PeerServer peerServer = new PeerServer(getApplicationContext(), db);
         peerServer.start();
+
+        try {
+            serverSock = new Socket("206.189.39.61", 5056);
+            serverOutput = new DataOutputStream(serverSock.getOutputStream());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
 //        Thread thread = new Thread(){
 //            public void run() {
@@ -73,11 +91,12 @@ public class STMessage extends Service {
 //                                String sendString = "RECEIVED"
 //                                        +"~"+dataArr[2]
 //                                        +"~"+utils.dateTime();
+//                                sendPacket(sendString, packetIP.toString());
 //
-//                                byte[] messageBytes = sendString.getBytes();
-//                                DatagramPacket sendPacket = new DatagramPacket(messageBytes,
-//                                        messageBytes.length, packetIP, 7070);
-//                                serverSocket.send(sendPacket);
+////                                byte[] messageBytes = sendString.getBytes();
+////                                DatagramPacket sendPacket = new DatagramPacket(messageBytes,
+////                                        messageBytes.length, packetIP, 7070);
+////                                serverSocket.send(sendPacket);
 //                                break;
 //                            case "RECEIVED":
 //                                db.execSQL("UPDATE sent_message SET sent = 1, sent_timestamp = \"" + dataArr[2] + "\" WHERE id = " + dataArr[1]);
@@ -106,6 +125,7 @@ public class STMessage extends Service {
             DatagramPacket sendPacket = new DatagramPacket(messageBytes,
                     messageBytes.length, InetAddress.getByName(peerIP), 7070);
             serverSocket.send(sendPacket);
+            serverOutput.writeUTF(payload);
         } catch (Exception e) {
             e.printStackTrace();
         }
