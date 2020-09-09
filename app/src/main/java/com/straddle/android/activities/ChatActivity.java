@@ -16,6 +16,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.StrictMode;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -228,6 +229,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
 
     public void addMessage(int id, String type, String message,
                            String timestamp, String sent, String sentTimestamp, String readTimestamp) {
+        Log.d("ADD_MESSAGE_DETAILS", type+" "+message+" "+timestamp+" "+sent+" "+sentTimestamp+" "+readTimestamp);
         TextView tvMsg = new TextView(this);
         tvMsg.setText(message);
         tvMsg.setTextSize(18);
@@ -256,9 +258,9 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
             tvStatus.setOnClickListener(this);
             tvStatus.setTextSize(10);
 
-            if(!readTimestamp.equals("")) {
+            if(readTimestamp != null && !readTimestamp.equals("")) {
                 tvStatus.setText("Read on " + readTimestamp);
-            } else if(sent.equals("1")) {
+            } else if(readTimestamp != null && sent.equals("1")) {
                 tvStatus.setText("Delivered on " + sentTimestamp);
             } else {
                 tvStatus.setText("Sending");
