@@ -7,16 +7,28 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.straddle.android.R;
 import com.straddle.android.services.STMessage;
+import com.straddle.android.utils.SQLiteHelper;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -25,22 +37,38 @@ import java.net.SocketException;
 import java.util.Enumeration;
 
 public class ConversationsActivity extends AppCompatActivity implements View.OnClickListener {
+    private SharedPreferences userDetails;
 
-    EditText peerIP, mobileNo, myNumber;
+    SQLiteDatabase db;
+
+    TextView myNumber;
+    EditText mobileNo;
     Button message, start, stop;
     TextView privateIPAddress;
+    TextView publicIPAddress;
+
+    LinearLayout chatList;
+
+    RequestQueue queue;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_conversations);
 
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+
+        db = new SQLiteHelper(getApplicationContext()).getReadableDatabase();
+
         startService(new Intent(this, STMessage.class));
 
-//        LocalBroadcastManager.getInstance(this).registerReceiver(aLBReceiver,
-//                new IntentFilter("eventName"));
+        userDetails = getSharedPreferences("user_details", MODE_PRIVATE);
 
-        peerIP = findViewById(R.id.peerIP);
+        queue = Volley.newRequestQueue(this);
+
+        //        LocalBroadcastManager.getInstance(this).registerReceiver(aLBReceiver,
+        //                new IntentFilter("eventName"));
 
         message = findViewById(R.id.message);
         message.setOnClickListener(this);
@@ -52,10 +80,57 @@ public class ConversationsActivity extends AppCompatActivity implements View.OnC
         stop.setOnClickListener(this);
 
         mobileNo = findViewById(R.id.mobileNo);
+
         myNumber = findViewById(R.id.myNumber);
+        myNumber.setText(userDetails.getString("country_code", "") + userDetails.getString("number", ""));
 
         privateIPAddress = findViewById(R.id.privateIPAddress);
         getLocalIPAddress();
+
+        publicIPAddress = findViewById(R.id.publicIPAddress);
+        getPublicIPAddress();
+
+        chatList = findViewById(R.id.chatList);
+        loadConversations();
+    }
+
+    public void loadConversations() {
+        final Cursor res = db.rawQuery("SELECT user, message, MAX(timestamp) as time\n" +
+                "FROM (SELECT from_user as user, message, timestamp\n" +
+                "FROM received_message \n" +
+                "UNION\n" +
+                "SELECT to_user as user, message, timestamp\n" +
+                "from sent_message) convs\n" +
+                "GROUP BY user", null);
+        res.moveToFirst();
+        while (res.isAfterLast() == false) {
+            TextView number = new TextView(this);
+            final String userNumber = res.getString(res.getColumnIndex("user"));
+            number.setText(userNumber);
+            number.setTextSize(24);
+            chatList.addView(number);
+
+            number.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent(getApplicationContext(), ChatActivity.class);
+                    intent.putExtra("MOBILE_NO", userNumber);
+                    startActivity(intent);
+                }
+            });
+
+            TextView time = new TextView(this);
+            time.setText(res.getString(res.getColumnIndex("time")));
+            time.setTextSize(12);
+            chatList.addView(time);
+
+            TextView message = new TextView(this);
+            message.setText(res.getString(res.getColumnIndex("message")));
+            message.setTextSize(18);
+            chatList.addView(message);
+
+            res.moveToNext();
+        }
     }
 
     @Override
@@ -63,9 +138,7 @@ public class ConversationsActivity extends AppCompatActivity implements View.OnC
         switch (v.getId()) {
             case R.id.message:
                 Intent intent = new Intent(this, ChatActivity.class);
-                intent.putExtra("PEER_IP", peerIP.getText().toString());
                 intent.putExtra("MOBILE_NO", mobileNo.getText().toString());
-                intent.putExtra("MY_NUMBER", myNumber.getText().toString());
                 startActivity(intent);
                 break;
             case R.id.startButton:
@@ -109,6 +182,28 @@ public class ConversationsActivity extends AppCompatActivity implements View.OnC
         } catch (SocketException ex) {
             ex.printStackTrace();
         }
+    }
+
+    public void getPublicIPAddress() {
+        String url = "https://checkip.amazonaws.com/";
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        // Display the first 500 characters of the response string.
+                        publicIPAddress.setText("Public IP Address: "+ response.replace("\n", ""));
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.d("IP Set Error", error.toString());
+                publicIPAddress.setText("Public IP Address: FAILED");
+            }
+        });
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest);
     }
 
 

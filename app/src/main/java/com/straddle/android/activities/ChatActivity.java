@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
@@ -35,7 +36,7 @@ import java.net.DatagramSocket;
 
 public class ChatActivity extends AppCompatActivity implements View.OnClickListener {
 
-    DatagramSocket clientSocket;
+    private SharedPreferences userDetails;
 
     SQLiteDatabase db;
 
@@ -64,19 +65,14 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
 
         db = new SQLiteHelper(getApplicationContext()).getReadableDatabase();
 
-        Bundle extras = getIntent().getExtras();
-        peerIP = extras.getString("PEER_IP");
-        peerMobileNo = extras.getString("MOBILE_NO");
-        myNumber = extras.getString("MY_NUMBER");
+        userDetails = getSharedPreferences("user_details", MODE_PRIVATE);
 
-        try {
-            clientSocket = new DatagramSocket();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        Bundle extras = getIntent().getExtras();
+//        peerIP = extras.getString("PEER_IP");
+        peerMobileNo = extras.getString("MOBILE_NO");
+        myNumber = userDetails.getString("country_code", "") + userDetails.getString("number", "");
 
         peerIP_tv = findViewById(R.id.peerIP_tv);
-        peerIP_tv.setText(peerIP);
 
         mobileNo_tv = findViewById(R.id.mobileNo_tv);
         mobileNo_tv.setText(peerMobileNo);
@@ -95,6 +91,16 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
 
         getMessages();
         moveToBottom();
+
+    }
+
+    private void getPeerIPAddress() {
+        this.peerIP = stMessage.getPeerIP(peerMobileNo);
+        if(peerIP != null) {
+            peerIP_tv.setText(peerIP);
+            sendMessage.setEnabled(true);
+        }
+
     }
 
     private BroadcastReceiver aLBReceiver = new BroadcastReceiver() {
@@ -114,7 +120,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
                         String sendString = "READ"
                                 +"~"+dateTime
                                 +"~"+dataArr[2];
-                        stMessage.sendPacket(sendString, peerIP);
+                        stMessage.sendPacket(sendString, peerIP, "PEER");
 
                     } else {
                         Toast.makeText(getApplicationContext(), data, Toast.LENGTH_SHORT).show();
@@ -179,7 +185,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
             String sendString = "READ"
                     +"~"+dateTime
                     +"~"+peerIDs;
-            stMessage.sendPacket(sendString, peerIP);
+            stMessage.sendPacket(sendString, peerIP, "PEER");
         }
     }
 
@@ -206,7 +212,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
                         +"~"+saved
                         +"~"+dateTime
                         +"~"+message.getText().toString();
-                stMessage.sendPacket(sendString, peerIP);
+                stMessage.sendPacket(sendString, peerIP, "PEER");
                 addMessage((int) saved, "to", message.getText().toString(), dateTime,
                         "0", "", "");
                 moveToBottom();
@@ -299,6 +305,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
             STMessage.LocalBinder mLocalBinder = (STMessage.LocalBinder) service;
             stMessage = mLocalBinder.getServerInstance();
             sendReadReceipts();
+            getPeerIPAddress();
         }
     };
 

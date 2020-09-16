@@ -1,34 +1,33 @@
 package com.straddle.android.services;
 
-import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Looper;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import java.io.DataOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.Socket;
 
+import com.straddle.android.api.API;
 import com.straddle.android.utils.Utils;
 
-import static android.content.Context.BIND_AUTO_CREATE;
-
-public class PeerServer extends Thread {
+public class PeerServerThread extends Thread {
     Context context;
     SQLiteDatabase db;
+    STMessage stMessage;
+    Socket serverSock;
 
-    public PeerServer(Context context, SQLiteDatabase db) {
+    public PeerServerThread(Context context, SQLiteDatabase db, STMessage stMessage,
+                            Socket serverSock) {
         this.context = context;
         this.db = db;
+        this.stMessage = stMessage;
     }
 
     @Override
@@ -71,13 +70,14 @@ public class PeerServer extends Thread {
 
                         // Send RECEIVED packet for the message
                         String sendString = "RECEIVED"
-                                +"~"+dataArr[2]
-                                +"~"+utils.dateTime();
+                            +"~"+dataArr[2]
+                            +"~"+utils.dateTime();
+                        stMessage.sendPacket(sendString, packetIP.getHostAddress(), "PEER");
 
-                        byte[] messageBytes = sendString.getBytes();
-                        DatagramPacket sendPacket = new DatagramPacket(messageBytes,
-                                messageBytes.length, packetIP, 7070);
-                        serverSocket.send(sendPacket);
+//                        byte[] messageBytes = sendString.getBytes();
+//                        DatagramPacket sendPacket = new DatagramPacket(messageBytes,
+//                                messageBytes.length, packetIP, 7070);
+//                        serverSocket.send(sendPacket);
                         break;
                     case "RECEIVED":
                         db.execSQL("UPDATE sent_message SET sent = 1, sent_timestamp = \"" + dataArr[2] + "\" WHERE id = " + dataArr[1]);

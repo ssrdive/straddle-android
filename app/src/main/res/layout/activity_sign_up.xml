@@ -34,21 +34,55 @@
             android:maxLength="9"
             android:inputType="number"
             android:ems="10"
+            android:id="@+id/number"
             android:hint="Mobile Number"/>
     </LinearLayout>
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Verify"
+        android:text="Send PIN"
         android:fontFamily="@font/ubuntu"
-        android:id="@+id/verifyNumber"/>
+        android:id="@+id/sendPin"/>
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Next"
         android:fontFamily="@font/ubuntu"
+        android:visibility="gone"
         android:id="@+id/next"/>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/disclaimer"
+            android:visibility="invisible"
+            android:text="Continuing with the verification process will delete existing user data such as messages, delivered receipts and sent receipts" />
+
+            <EditText
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:maxLength="9"
+                android:inputType="number"
+                android:ems="10"
+                android:id="@+id/pin"
+                android:visibility="invisible"
+                android:hint="PIN"/>
+
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Verify PIN"
+                android:fontFamily="@font/ubuntu"
+                android:visibility="invisible"
+                android:id="@+id/verifyPin"/>
+
+    </LinearLayout>
 
 </LinearLayout>
