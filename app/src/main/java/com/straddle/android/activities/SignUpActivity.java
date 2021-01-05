@@ -233,7 +233,7 @@ public class SignUpActivity extends AppCompatActivity implements View.OnClickLis
                     error.printStackTrace();
                     enableSendPINControls();
                     AlertDialog failureAlert = new AlertDialog.Builder(SignUpActivity.this).create();
-                    failureAlert.setTitle("Failed to send verification PIN");
+                    failureAlert.setTitle("Incorrect verification PIN");
                     failureAlert.setMessage(error.toString());
                     failureAlert.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
                             new DialogInterface.OnClickListener() {

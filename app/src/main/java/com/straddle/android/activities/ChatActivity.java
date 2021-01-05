@@ -42,7 +42,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
 
     String peerIP, peerMobileNo, myNumber;
 
-    TextView peerIP_tv, mobileNo_tv, myNumber_tv;
+    TextView peerIP_tv, mobileNo_tv, myNumber_tv, showProfile;
     Button sendMessage;
     EditText message;
     LinearLayout messagesView;
@@ -82,6 +82,16 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
 
         sendMessage = findViewById(R.id.sendMessage);
         sendMessage.setOnClickListener(this);
+
+        showProfile = findViewById(R.id.showProfile);
+        showProfile.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplicationContext(), UserProfileActivity.class);
+                intent.putExtra("number", peerMobileNo.substring(2));
+                startActivity(intent);
+            }
+        });
 
         message = findViewById(R.id.message);
 
@@ -134,7 +144,8 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
                     String[] ids = dataArr[2].split(",");
                     for(String id : ids) {
                         TextView msgReadStatus = findViewById(Integer.parseInt(id));
-                        msgReadStatus.setText("Read on " + dataArr[1]);
+                        if (msgReadStatus != null)
+                            msgReadStatus.setText("Read on " + dataArr[1]);
                     }
                     break;
             }
@@ -235,7 +246,6 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
 
     public void addMessage(int id, String type, String message,
                            String timestamp, String sent, String sentTimestamp, String readTimestamp) {
-        Log.d("ADD_MESSAGE_DETAILS", type+" "+message+" "+timestamp+" "+sent+" "+sentTimestamp+" "+readTimestamp);
         TextView tvMsg = new TextView(this);
         tvMsg.setText(message);
         tvMsg.setTextSize(18);
@@ -285,41 +295,42 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onStart() {
         super.onStart();
-
-        Intent mIntent = new Intent(this, STMessage.class);
-        bindService(mIntent, mConnection, BIND_AUTO_CREATE);
     }
 
     ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceDisconnected(ComponentName name) {
-//            Toast.makeText(ChatActivity.this, "Service is disconnected", Toast.LENGTH_LONG).show();
             mBounded = false;
             stMessage = null;
         }
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-//            Toast.makeText(ChatActivity.this, "Service is connected", Toast.LENGTH_LONG).show();
             mBounded = true;
             STMessage.LocalBinder mLocalBinder = (STMessage.LocalBinder) service;
             stMessage = mLocalBinder.getServerInstance();
-            sendReadReceipts();
             getPeerIPAddress();
+            sendReadReceipts();
         }
     };
-
-    @Override
-    public void onPause() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(aLBReceiver);
-        super.onPause();
-    }
 
     @Override
     public void onResume() {
         LocalBroadcastManager.getInstance(this).registerReceiver(aLBReceiver,
                 new IntentFilter("eventName"));
+        Intent mIntent = new Intent(this, STMessage.class);
+        bindService(mIntent, mConnection, BIND_AUTO_CREATE);
         super.onResume();
+    }
+
+    @Override
+    public void onPause() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(aLBReceiver);
+        if(mBounded) {
+            unbindService(mConnection);
+            mBounded = false;
+        }
+        super.onPause();
     }
 
     @Override
